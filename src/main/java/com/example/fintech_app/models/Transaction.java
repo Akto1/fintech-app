@@ -1,4 +1,4 @@
-package models;
+package com.example.fintech_app.models;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,9 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Entity
 @Table(name = "transactions")
@@ -23,10 +21,12 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false,unique = true)
+    @ManyToOne
+    @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-    @Column(nullable = false,unique = true)
+    @ManyToOne
+    @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 
     @Column(nullable = false,unique = true)
@@ -36,5 +36,5 @@ public class Transaction {
     private Type type;
 
     @Column(nullable = false,unique = true)
-    private LocalDateTime timestamp = LocalDateTime.from(Instant.now());
+    private LocalDateTime timestamp;
 }

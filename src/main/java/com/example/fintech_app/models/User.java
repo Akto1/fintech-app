@@ -1,4 +1,4 @@
-package models;
+package com.example.fintech_app.models;
 
 
 import jakarta.persistence.*;
@@ -26,10 +26,13 @@ public class User {
     @Column(nullable = false,unique = true,updatable = true,length = 30)
     private String email;
 
-    @Column(unique = true,updatable = true,nullable = false,length = 15)
+    @Column(unique = true,updatable = true,nullable = false,length = 100)
     private String password;
 
     @Column(nullable = false,updatable = true)
     private BigDecimal balance = BigDecimal.ZERO;
 
+    @Column(nullable = false,unique = false)
+    @Enumerated(EnumType.STRING)
+    private Roles roles;
 }

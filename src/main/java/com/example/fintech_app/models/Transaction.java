@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,12 +28,12 @@ public class Transaction {
     @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 
-    @Column(nullable = false,unique = true)
+    @Column(nullable = false,unique = false)
     private BigDecimal amount;
 
-    @Column(nullable = false,unique = true)
+    @Column(nullable = false,unique = false)
     private Type type;
 
-    @Column(nullable = false,unique = true)
+    @Column(nullable = false,unique = false)
     private LocalDateTime timestamp;
 }

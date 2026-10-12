@@ -6,9 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record TransactionResponseDTO(
-        Long id,
-        String senderUsername,
-        String receiverUsername,
+        Long senderId,
+        Long receiverId,
         BigDecimal amount,
         Type type,
         LocalDateTime timestamp){}

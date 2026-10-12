@@ -3,6 +3,7 @@ package com.example.fintech_app.services;
 import com.example.fintech_app.DTO.UserCreateDTO;
 import com.example.fintech_app.DTO.UserResponseDTO;
 import com.example.fintech_app.Repositories.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import com.example.fintech_app.models.Roles;
@@ -18,7 +19,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
 
-    public UserResponseDTO createUser(UserCreateDTO dto){
+    public UserResponseDTO createUser(@Valid  UserCreateDTO dto){
         User user = new User();
         user.setUsername(dto.username());
         user.setEmail(dto.email());

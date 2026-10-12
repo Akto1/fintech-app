@@ -13,6 +13,7 @@ import com.example.fintech_app.services.UserService;
 @RequiredArgsConstructor
 @RequestMapping("/api")
 public class userController {
+
     private final UserService service;
     @PostMapping("/register")
     public  UserResponseDTO createUser(@RequestBody UserCreateDTO user){

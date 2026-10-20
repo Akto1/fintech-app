@@ -6,12 +6,10 @@ import com.example.fintech_app.services.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class transactionController {
+public class TransactionController {
     private final TransactionService service;
     @PostMapping("/deposit")
     public TransactionResponseDTO deposit (@RequestBody TransactionCreateDTO dto){

@@ -118,4 +118,19 @@ class TransactionServiceTest {
         verify(transactionRepository,times(1)).save(any(Transaction.class));
         System.out.println("Депозит пополнился");
     }
+
+    @Test
+    @DisplayName("Проверка юзера для депозита")
+    public void isUserExistForDeposit(){
+        User user = new User();
+        user.setId(1L);
+        user.setBalance(new BigDecimal(100));
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,()->{
+            service.deposit(1L,new BigDecimal(500));
+                });
+        verify(transactionRepository,never()).save(any(Transaction.class));
+        System.out.println("Юзера для пополнения баланса не существует");
+    }
 }

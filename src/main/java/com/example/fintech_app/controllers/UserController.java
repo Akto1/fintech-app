@@ -12,7 +12,7 @@ import com.example.fintech_app.services.UserService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-public class userController {
+public class UserController {
 
     private final UserService service;
     @PostMapping("/register")

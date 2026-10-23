@@ -12,7 +12,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -23,20 +22,20 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
 
     @Transactional
-    public TransactionResponseDTO deposit(Long receiverId, BigDecimal amount) {
+    public TransactionResponseDTO deposit(String userEmail, BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Сумма пополнения должна быть больше нуля");
         }
 
-        User user = userRepository.findById(receiverId)
+        User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
 
         user.setBalance(user.getBalance().add(amount));
         userRepository.save(user);
 
         Transaction transaction = new Transaction();
-        transaction.setSender((user));
-        transaction.setReceiver((user));
+        transaction.setSender(user);
+        transaction.setReceiver(user);
         transaction.setAmount(amount);
         transaction.setType(Type.DEPOSIT);
         transaction.setTimestamp(LocalDateTime.now());
@@ -53,22 +52,20 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionResponseDTO transfer(TransactionCreateDTO dto) {
+    public TransactionResponseDTO transfer(String senderEmail, TransactionCreateDTO dto) {
         if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Сумма перевода должна быть больше нуля");
         }
 
-        if (dto.senderId().equals(dto.receiverId())) {
-            throw new IllegalArgumentException("Нельзя перевести деньги самому себе");
-        }
-
-        User sender = userRepository.findById(dto.senderId())
+        User sender = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Отправитель не найден"));
 
         User receiver = userRepository.findById(dto.receiverId())
                 .orElseThrow(() -> new EntityNotFoundException("Получатель не найден"));
 
-
+        if (sender.getId().equals(receiver.getId())) {
+            throw new IllegalArgumentException("Нельзя перевести деньги самому себе");
+        }
 
         if (sender.getBalance().compareTo(dto.amount()) < 0) {
             throw new IllegalStateException("Недостаточно средств на балансе");

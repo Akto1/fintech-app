@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
-
+    private final JWTService jwtService;
     public UserResponseDTO createUser(@Valid  UserCreateDTO dto){
         User user = new User();
         user.setUsername(dto.username());
@@ -31,5 +31,23 @@ public class UserService {
                 savedUser.getUsername(),
                 savedUser.getEmail(),
                 savedUser.getRoles());
+    }
+
+    public String login(@Valid UserCreateDTO dto){
+        User existingUser = userRepository.findByEmail(dto.email()).orElseThrow(()-> new RuntimeException("Incorrect email "));
+    if(!encoder.matches(dto.password(), existingUser.getPassword())){
+    throw new RuntimeException("Incorrect password");
+    }
+    String token = jwtService.generateToken(existingUser.getEmail());
+        System.out.println("Token " + token);
+    return  token;
+
+    }
+
+
+    public String aboutMe(String email){
+        User findUser = userRepository.findByEmail(email).orElseThrow(()-> new RuntimeException("Incorrect email "));
+        return "Your name : " + findUser.getUsername()+ "\nYour id : " + findUser.getId()
+                + "\n" + "Your balance : " + findUser.getBalance() + " Tenge\n" + "Your role : " + findUser.getRoles();
     }
 }

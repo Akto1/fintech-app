@@ -3,8 +3,10 @@ package com.example.fintech_app.services;
 import com.example.fintech_app.DTO.TransactionCreateDTO;
 import com.example.fintech_app.DTO.TransactionResponseDTO;
 import com.example.fintech_app.Repositories.TransactionRepository;
+import com.example.fintech_app.Repositories.TransactionsHRepository;
 import com.example.fintech_app.Repositories.UserRepository;
 import com.example.fintech_app.models.Transaction;
+import com.example.fintech_app.models.TransactionsHistory;
 import com.example.fintech_app.models.Type;
 import com.example.fintech_app.models.User;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +22,7 @@ import java.time.LocalDateTime;
 public class TransactionService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final TransactionsHRepository transactionsHRepository;
 
     @Transactional
     public TransactionResponseDTO deposit(String userEmail, BigDecimal amount) {
@@ -40,6 +43,15 @@ public class TransactionService {
         transaction.setType(Type.DEPOSIT);
         transaction.setTimestamp(LocalDateTime.now());
 
+        TransactionsHistory history = new TransactionsHistory();
+        history.setSenderId(transaction.getSender().getId());
+        history.setReceiverId(transaction.getReceiver().getId());
+        history.setType(Type.DEPOSIT);
+        history.setDateTime(LocalDateTime.now());
+        history.setAmount(amount);
+
+        transactionsHRepository.save(history);
+
         Transaction saved = transactionRepository.save(transaction);
 
         return new TransactionResponseDTO(
@@ -49,6 +61,7 @@ public class TransactionService {
                 saved.getType(),
                 saved.getTimestamp()
         );
+
     }
 
     @Transactional
@@ -83,6 +96,15 @@ public class TransactionService {
         transaction.setAmount(dto.amount());
         transaction.setType(Type.TRANSFER);
         transaction.setTimestamp(LocalDateTime.now());
+
+        TransactionsHistory history = new TransactionsHistory();
+        history.setSenderId(sender.getId());
+        history.setReceiverId(receiver.getId());
+        history.setType(Type.TRANSFER);
+        history.setDateTime(LocalDateTime.now());
+        history.setAmount(dto.amount());
+
+        transactionsHRepository.save(history);
 
         Transaction saved = transactionRepository.save(transaction);
 

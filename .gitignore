@@ -1,0 +1,13 @@
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+
+target/
+.mvn/
+*.log
+.DS_Store
+src/main/resources/application-local.properties
+src/main/resources/application-prod.properties

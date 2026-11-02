@@ -2,6 +2,7 @@ package com.example.fintech_app.controllers;
 
 import com.example.fintech_app.DTO.UserCreateDTO;
 import com.example.fintech_app.DTO.UserResponseDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import com.example.fintech_app.services.UserService;
@@ -15,12 +16,12 @@ public class UserController {
 
     private final UserService service;
     @PostMapping("/register")
-    public  UserResponseDTO createUser(@RequestBody UserCreateDTO user){
+    public  UserResponseDTO createUser(@Valid @RequestBody UserCreateDTO user){
     return service.createUser(user);
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody UserCreateDTO user){
+    public String login(@Valid @RequestBody UserCreateDTO user){
         return service.login(user);
     }
 

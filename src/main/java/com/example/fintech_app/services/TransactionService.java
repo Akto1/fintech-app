@@ -30,9 +30,11 @@ public class TransactionService {
             throw new IllegalArgumentException("Сумма пополнения должна быть больше нуля");
         }
 
-        User user = userRepository.findByEmail(userEmail)
+        User userRef = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
 
+        User user = userRepository.findByIdForUpdate(userRef.getId())
+                        .orElseThrow(()-> new EntityNotFoundException("Счёт не найден"));
         user.setBalance(user.getBalance().add(amount));
         userRepository.save(user);
 
@@ -70,15 +72,28 @@ public class TransactionService {
             throw new IllegalArgumentException("Сумма перевода должна быть больше нуля");
         }
 
-        User sender = userRepository.findByEmail(senderEmail)
+
+        User senderRef = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Отправитель не найден"));
 
-        User receiver = userRepository.findById(dto.receiverId())
-                .orElseThrow(() -> new EntityNotFoundException("Получатель не найден"));
+        Long senderId = senderRef.getId();
+        Long receiverId = dto.receiverId();
 
-        if (sender.getId().equals(receiver.getId())) {
+        if (senderId.equals(receiverId)) {
             throw new IllegalArgumentException("Нельзя перевести деньги самому себе");
         }
+
+
+        Long firstId = Math.min(senderId, receiverId);
+        Long secondId = Math.max(senderId, receiverId);
+
+        User first = userRepository.findByIdForUpdate(firstId)
+                .orElseThrow(() -> new EntityNotFoundException("Один из счетов не найден"));
+        User second = userRepository.findByIdForUpdate(secondId)
+                .orElseThrow(() -> new EntityNotFoundException("Один из счетов не найден"));
+
+        User sender = senderId.equals(firstId) ? first : second;
+        User receiver = senderId.equals(firstId) ? second : first;
 
         if (sender.getBalance().compareTo(dto.amount()) < 0) {
             throw new IllegalStateException("Недостаточно средств на балансе");

@@ -25,13 +25,13 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false,unique = true,length = 10)
+    @Column(nullable = false,length = 10)
     private String username;
 
     @Column(nullable = false,unique = true,updatable = true,length = 30)
     private String email;
 
-    @Column(unique = true,updatable = true,nullable = false,length = 100)
+    @Column(updatable = true,nullable = false,length = 100)
     private String password;
 
     @Column(nullable = false,updatable = true)

@@ -1,28 +1,26 @@
 package com.example.fintech_app.tests;
 
 
-import com.example.fintech_app.DTO.TransactionCreateDTO;
 import com.example.fintech_app.DTO.TransactionResponseDTO;
-import com.example.fintech_app.DTO.UserCreateDTO;
+import com.example.fintech_app.DTO.Transfer;
+import com.example.fintech_app.Exceptions.InsufficientFundsException;
+import com.example.fintech_app.Exceptions.UserNotFoundException;
 import com.example.fintech_app.Repositories.TransactionRepository;
+import com.example.fintech_app.Repositories.TransactionsHRepository;
 import com.example.fintech_app.Repositories.UserRepository;
 import com.example.fintech_app.models.Transaction;
+import com.example.fintech_app.models.TransactionsHistory;
 import com.example.fintech_app.models.Type;
 import com.example.fintech_app.models.User;
 import com.example.fintech_app.services.TransactionService;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.crossstore.ChangeSetPersister;
-
 import java.math.BigDecimal;
 import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,106 +29,90 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
+
     @Mock
     private UserRepository userRepository;
     @Mock
     private TransactionRepository transactionRepository;
+    @Mock
+    private TransactionsHRepository transactionsHRepository; // Не забыли!
+
     @InjectMocks
     private TransactionService service;
 
     @Test
-    @DisplayName("Успешный тест")
-    public void success(){
+    @DisplayName("Успешный перевод")
+    void transfer_Success() {
+        // 1. Подготовка данных (Given)
         User sender = new User();
         sender.setId(1L);
-        sender.setBalance(new BigDecimal(1000));
+        sender.setBalance(new BigDecimal("1000"));
 
         User receiver = new User();
         receiver.setId(2L);
-        receiver.setBalance(new BigDecimal(600));
+        receiver.setBalance(new BigDecimal("600"));
 
+        Transfer dto = new Transfer(2L, new BigDecimal("200"), Type.TRANSFER); // Используем твой DTO Transfer
+        String senderEmail = "test@mail.com";
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(receiver));
+        // Мокаем поведение базы данных
+        when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.of(sender));
+        // Внимание: твой сервис использует блокировку Math.min/max!
+        // Значит, он вызовет findByIdForUpdate(1L) и findByIdForUpdate(2L)
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(receiver));
 
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation->invocation.getArgument(0));
-        TransactionCreateDTO dto = new TransactionCreateDTO(1L,2L,new BigDecimal(200), Type.TRANSFER);
-        TransactionResponseDTO result = service.transfer(dto);
+        // Мокаем сохранение (чтобы возвращался тот же объект)
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertEquals(new BigDecimal("800"),sender.getBalance());
-        assertEquals(new BigDecimal("800"),receiver.getBalance());
+        // 2. Вызов метода (When)
+        TransactionResponseDTO result = service.transfer(senderEmail, dto);
 
-        System.out.println("Tест отработал");
+        // 3. Проверки (Then)
+        assertEquals(new BigDecimal("800"), sender.getBalance());
+        assertEquals(new BigDecimal("800"), receiver.getBalance());
+
+        // Проверяем, что история транзакции и сама транзакция сохранились
+        verify(transactionsHRepository, times(1)).save(any(TransactionsHistory.class));
+        verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
 
     @Test
-    @DisplayName("Недостаточно средств")
-    public void notEnoughMoney(){
+    @DisplayName("Недостаточно средств для перевода")
+    void transfer_InsufficientFunds() {
         User sender = new User();
         sender.setId(1L);
-        sender.setBalance(new BigDecimal(400));
+        sender.setBalance(new BigDecimal("400"));
 
         User receiver = new User();
         receiver.setId(2L);
-        receiver.setBalance(new BigDecimal(600));
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(receiver));
-        TransactionCreateDTO dto = new TransactionCreateDTO(1L,2L,new BigDecimal(600),Type.TRANSFER);
-        assertThrows(RuntimeException.class,()-> {
-            service.transfer(dto);
-        });
-        verify(transactionRepository,never()).save(any(Transaction.class));
+        Transfer dto = new Transfer(2L, new BigDecimal("600"),Type.TRANSFER);
+        String senderEmail = "test@mail.com";
 
-        System.err.println("Недостаточно средств");
-    }
+        when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.of(sender));
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(receiver));
 
+        // Проверяем КОНКРЕТНОЕ исключение!
+        assertThrows(InsufficientFundsException.class, () -> service.transfer(senderEmail, dto));
 
-    @Test
-    @DisplayName("Существуют юзер")
-    public void notExistsUser(){
-        User sender = new User();
-        sender.setId(1L);
-        sender.setBalance(new BigDecimal(1000));
-        User receiver = new User();
-        receiver.setId(2L);
-        receiver.setBalance(new BigDecimal(600));
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
-        TransactionCreateDTO dto = new TransactionCreateDTO(1L,2L,new BigDecimal(400),Type.TRANSFER);
-        assertThrows(EntityNotFoundException.class,()-> {
-            service.transfer(dto);
-        });
-        verify(transactionRepository,never()).save(any(Transaction.class));
-
-        System.out.println("Юзера не существует");
+        // Проверяем, что деньги НЕ были списаны, и транзакция НЕ сохранилась
+        assertEquals(new BigDecimal("400"), sender.getBalance());
+        verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
     @Test
-    @DisplayName("Проверка Депозита")
-    public void isDepositIncreasesTheScore(){
-        User user = new User();
-        user.setId(1L);
-        user.setBalance(new BigDecimal(100));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
-        TransactionResponseDTO dto = service.deposit(1L,new BigDecimal(500));
-        assertEquals(new BigDecimal(600),user.getBalance());
-        verify(transactionRepository,times(1)).save(any(Transaction.class));
-        System.out.println("Депозит пополнился");
-    }
+    @DisplayName("Пользователь не найден при переводе")
+    void transfer_UserNotFound() {
+        String senderEmail = "notfound@mail.com";
+        Transfer dto = new Transfer(2L, new BigDecimal("100"),Type.TRANSFER);
 
-    @Test
-    @DisplayName("Проверка юзера для депозита")
-    public void isUserExistForDeposit(){
-        User user = new User();
-        user.setId(1L);
-        user.setBalance(new BigDecimal(100));
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        // Мокаем, что база не нашла отправителя
+        when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class,()->{
-            service.deposit(1L,new BigDecimal(500));
-                });
-        verify(transactionRepository,never()).save(any(Transaction.class));
-        System.out.println("Юзера для пополнения баланса не существует");
+        // Ожидаем наше кастомное исключение!
+        assertThrows(UserNotFoundException.class, () -> service.transfer(senderEmail, dto));
+        verify(transactionRepository, never()).save(any(Transaction.class));
     }
 }

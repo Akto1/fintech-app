@@ -1,7 +1,9 @@
 package com.example.fintech_app.services;
 
-import com.example.fintech_app.DTO.TransactionCreateDTO;
 import com.example.fintech_app.DTO.TransactionResponseDTO;
+import com.example.fintech_app.DTO.Transfer;
+import com.example.fintech_app.Exceptions.InsufficientFundsException;
+import com.example.fintech_app.Exceptions.UserNotFoundException;
 import com.example.fintech_app.Repositories.TransactionRepository;
 import com.example.fintech_app.Repositories.TransactionsHRepository;
 import com.example.fintech_app.Repositories.UserRepository;
@@ -9,7 +11,6 @@ import com.example.fintech_app.models.Transaction;
 import com.example.fintech_app.models.TransactionsHistory;
 import com.example.fintech_app.models.Type;
 import com.example.fintech_app.models.User;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,10 @@ public class TransactionService {
         }
 
         User userRef = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
 
         User user = userRepository.findByIdForUpdate(userRef.getId())
-                        .orElseThrow(()-> new EntityNotFoundException("Счёт не найден"));
+                        .orElseThrow(()-> new UserNotFoundException("Счёт не найден"));
         user.setBalance(user.getBalance().add(amount));
         userRepository.save(user);
 
@@ -67,14 +68,14 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionResponseDTO transfer(String senderEmail, TransactionCreateDTO dto) {
+    public TransactionResponseDTO transfer(String senderEmail, Transfer dto) {
         if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Сумма перевода должна быть больше нуля");
         }
 
 
         User senderRef = userRepository.findByEmail(senderEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Отправитель не найден"));
+                .orElseThrow(() -> new UserNotFoundException("Отправитель не найден"));
 
         Long senderId = senderRef.getId();
         Long receiverId = dto.receiverId();
@@ -88,15 +89,15 @@ public class TransactionService {
         Long secondId = Math.max(senderId, receiverId);
 
         User first = userRepository.findByIdForUpdate(firstId)
-                .orElseThrow(() -> new EntityNotFoundException("Один из счетов не найден"));
+                .orElseThrow(() -> new UserNotFoundException("Один из счетов не найден"));
         User second = userRepository.findByIdForUpdate(secondId)
-                .orElseThrow(() -> new EntityNotFoundException("Один из счетов не найден"));
+                .orElseThrow(() -> new UserNotFoundException("Один из счетов не найден"));
 
         User sender = senderId.equals(firstId) ? first : second;
         User receiver = senderId.equals(firstId) ? second : first;
 
         if (sender.getBalance().compareTo(dto.amount()) < 0) {
-            throw new IllegalStateException("Недостаточно средств на балансе");
+            throw new InsufficientFundsException("Недостаточно средств на балансе");
         }
 
         sender.setBalance(sender.getBalance().subtract(dto.amount()));

@@ -43,12 +43,12 @@ public class JwtAuthentificationFilter extends OncePerRequestFilter {
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Сессия истекла, залогиньтесь заново (прошло 10 минут)\"}");
+            response.getWriter().write("{\"error\": \"Сессия истекла, залогиньтесь заново\"}");
         }
-        catch (io.jsonwebtoken.security.SignatureException e) {
+        catch (io.jsonwebtoken.security.SignatureException | io.jsonwebtoken.MalformedJwtException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Недействительная подпись токена\"}");
+            response.getWriter().write("{\"error\": \"Недействительный или поврежденный токен\"}");
         }
 
         }

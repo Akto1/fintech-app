@@ -18,7 +18,7 @@ public class TransactionsHistoryService {
 
     public List<TransactionsHistory> getUserHistory(String email){
         User user = userRepository.findByEmail(email).
-                orElseThrow(()-> new RuntimeException("User not found"));
+                orElseThrow(()-> new RuntimeException("Пользователь не найден"));
         return repository.findBySenderIdOrReceiverId(user.getId(),user.getId());
     }
 }

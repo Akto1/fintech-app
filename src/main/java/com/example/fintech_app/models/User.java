@@ -28,7 +28,7 @@ public class User implements UserDetails {
     @Column(nullable = false,length = 10)
     private String username;
 
-    @Column(nullable = false,unique = true,updatable = true,length = 30)
+    @Column(nullable = false,unique = false,updatable = true,length = 30)
     private String email;
 
     @Column(updatable = true,nullable = false,length = 100)

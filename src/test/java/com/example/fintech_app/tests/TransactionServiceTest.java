@@ -43,7 +43,7 @@ class TransactionServiceTest {
     @Test
     @DisplayName("Успешный перевод")
     void transfer_Success() {
-        // 1. Подготовка данных (Given)
+
         User sender = new User();
         sender.setId(1L);
         sender.setBalance(new BigDecimal("1000"));
@@ -52,27 +52,23 @@ class TransactionServiceTest {
         receiver.setId(2L);
         receiver.setBalance(new BigDecimal("600"));
 
-        Transfer dto = new Transfer(2L, new BigDecimal("200"), Type.TRANSFER); // Используем твой DTO Transfer
+        Transfer dto = new Transfer(2L, new BigDecimal("200"), Type.TRANSFER);
+
         String senderEmail = "test@mail.com";
 
-        // Мокаем поведение базы данных
         when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.of(sender));
-        // Внимание: твой сервис использует блокировку Math.min/max!
-        // Значит, он вызовет findByIdForUpdate(1L) и findByIdForUpdate(2L)
+
         when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+
         when(userRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(receiver));
 
-        // Мокаем сохранение (чтобы возвращался тот же объект)
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // 2. Вызов метода (When)
         TransactionResponseDTO result = service.transfer(senderEmail, dto);
 
-        // 3. Проверки (Then)
         assertEquals(new BigDecimal("800"), sender.getBalance());
         assertEquals(new BigDecimal("800"), receiver.getBalance());
 
-        // Проверяем, что история транзакции и сама транзакция сохранились
         verify(transactionsHRepository, times(1)).save(any(TransactionsHistory.class));
         verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
@@ -91,14 +87,17 @@ class TransactionServiceTest {
         String senderEmail = "test@mail.com";
 
         when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.of(sender));
+
         when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+
         when(userRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(receiver));
 
-        // Проверяем КОНКРЕТНОЕ исключение!
+
         assertThrows(InsufficientFundsException.class, () -> service.transfer(senderEmail, dto));
 
-        // Проверяем, что деньги НЕ были списаны, и транзакция НЕ сохранилась
         assertEquals(new BigDecimal("400"), sender.getBalance());
+
+
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -108,11 +107,10 @@ class TransactionServiceTest {
         String senderEmail = "notfound@mail.com";
         Transfer dto = new Transfer(2L, new BigDecimal("100"),Type.TRANSFER);
 
-        // Мокаем, что база не нашла отправителя
         when(userRepository.findByEmail(senderEmail)).thenReturn(Optional.empty());
 
-        // Ожидаем наше кастомное исключение!
         assertThrows(UserNotFoundException.class, () -> service.transfer(senderEmail, dto));
+
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 }

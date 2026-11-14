@@ -26,7 +26,7 @@ public class TransactionService {
     private final TransactionsHRepository transactionsHRepository;
 
     @Transactional
-    public TransactionResponseDTO deposit(String userEmail, BigDecimal amount) {
+    public TransactionResponseDTO deposit(String userEmail,BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Сумма пополнения должна быть больше нуля");
         }
@@ -47,8 +47,8 @@ public class TransactionService {
         transaction.setTimestamp(LocalDateTime.now());
 
         TransactionsHistory history = new TransactionsHistory();
-        history.setSenderId(transaction.getSender().getId());
-        history.setReceiverId(transaction.getReceiver().getId());
+        history.setSenderPhoneNumber(transaction.getSender().getPhoneNumber());
+        history.setReceiverPhoneNumber(transaction.getReceiver().getPhoneNumber());
         history.setType(Type.DEPOSIT);
         history.setDateTime(LocalDateTime.now());
         history.setAmount(amount);
@@ -77,24 +77,23 @@ public class TransactionService {
         User senderRef = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new UserNotFoundException("Отправитель не найден"));
 
-        Long senderId = senderRef.getId();
-        Long receiverId = dto.receiverId();
+        User receiverPhone = userRepository.findByPhoneNumber(dto.receiverPhoneNumber())
+                .orElseThrow(()-> new UserNotFoundException("Получатель с таким номером не зарегистрирован"));
 
-        if (senderId.equals(receiverId)) {
+        if(senderRef.getId().equals(receiverPhone.getId())){
             throw new IllegalArgumentException("Нельзя перевести деньги самому себе");
         }
 
-
-        Long firstId = Math.min(senderId, receiverId);
-        Long secondId = Math.max(senderId, receiverId);
+        Long firstId = Math.min(senderRef.getId(), receiverPhone.getId());
+        Long secondId = Math.max(senderRef.getId(), receiverPhone.getId());
 
         User first = userRepository.findByIdForUpdate(firstId)
                 .orElseThrow(() -> new UserNotFoundException("Один из счетов не найден"));
         User second = userRepository.findByIdForUpdate(secondId)
                 .orElseThrow(() -> new UserNotFoundException("Один из счетов не найден"));
 
-        User sender = senderId.equals(firstId) ? first : second;
-        User receiver = senderId.equals(firstId) ? second : first;
+        User sender = senderRef.getId().equals(firstId) ? first : second;
+        User receiver = sender.getId().equals(firstId) ? second : first;
 
         if (sender.getBalance().compareTo(dto.amount()) < 0) {
             throw new InsufficientFundsException("Недостаточно средств на балансе");
@@ -114,8 +113,8 @@ public class TransactionService {
         transaction.setTimestamp(LocalDateTime.now());
 
         TransactionsHistory history = new TransactionsHistory();
-        history.setSenderId(sender.getId());
-        history.setReceiverId(receiver.getId());
+        history.setSenderPhoneNumber(transaction.getSender().getPhoneNumber());
+        history.setReceiverPhoneNumber(transaction.getReceiver().getPhoneNumber());
         history.setType(Type.TRANSFER);
         history.setDateTime(LocalDateTime.now());
         history.setAmount(dto.amount());

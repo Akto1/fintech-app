@@ -24,20 +24,24 @@ public class UserService {
     public UserResponseDTO createUser(@Valid  UserCreateDTO dto){
 
         if(userRepository.existsByEmail(dto.email())){
-            throw new IllegalArgumentException("Пользователь с такой почтой уже существует");
+            throw new IllegalArgumentException("Пользователь с такой почтой уже зарегистрирован");
+        }
+        if(userRepository.existsByPhoneNumber(dto.phoneNumber())){
+            throw new IllegalArgumentException("Пользователь с таким номером телефона уже зарегистрирован");
         }
         User user = new User();
         user.setUsername(dto.username());
         user.setEmail(dto.email());
         user.setPassword(encoder.encode(dto.password()));
+        user.setPhoneNumber(dto.phoneNumber());
         user.setRoles(Roles.ROLE_USER);
         user.setBalance(BigDecimal.ZERO);
         User savedUser = userRepository.save(user);
         return new UserResponseDTO(
                 savedUser.getUsername(),
                 savedUser.getEmail(),
+                savedUser.getPhoneNumber(),
                 savedUser.getRoles());
-
     }
 
 
@@ -54,7 +58,7 @@ public class UserService {
 
     public String aboutMe(String email){
         User findUser = userRepository.findByEmail(email).orElseThrow(()-> new UserNotFoundException("Пользователь не найден!"));
-        return "Ваше имя : " + findUser.getUsername()+ "\nВаш айди : " + findUser.getId()
+        return "Ваше имя : " + findUser.getUsername()+ "\nВаш айди : " + findUser.getId() + "\nВаш номер телефона " + findUser.getPhoneNumber()
                 + "\n" + "Ваш баланс : " + findUser.getBalance() + " Тенге\n" + "Ваша роль : " + findUser.getRoles();
     }
 }

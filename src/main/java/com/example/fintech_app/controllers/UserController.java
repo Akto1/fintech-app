@@ -29,5 +29,6 @@ public class UserController {
     public String aboutMe(Principal principal){
         String email = principal.getName();
         return service.aboutMe(email);
+
     }
 }

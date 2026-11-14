@@ -19,10 +19,10 @@ public class TransactionsHistory {
     private Long TransactionId;
 
     @Column(nullable = false)
-    private Long senderId;
+    private String senderPhoneNumber;
 
     @Column(nullable = false)
-    private Long receiverId;
+    private String receiverPhoneNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -6,5 +6,6 @@ public record UserResponseDTO (
 
      String username,
      String email,
+     String phoneNumber,
      Roles role){
 }

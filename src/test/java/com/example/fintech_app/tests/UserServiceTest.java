@@ -42,7 +42,7 @@ public class UserServiceTest {
         user.setPassword("pass1234");
 
 
-        UserCreateDTO dto = new UserCreateDTO("emil", "emil123@gmail.com", "pass123");
+        UserCreateDTO dto = new UserCreateDTO("emil", "7 700 746 7794", "emil123@gmail.com","pass123");
         when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
         when(encoder.matches("pass123", "pass1234")).thenReturn(false);
         assertThrows(BadCredentialsException.class, () -> userService.login(dto));
@@ -53,7 +53,7 @@ public class UserServiceTest {
     @DisplayName("NotFoundUser")
     void notFound() {
 
-        UserCreateDTO dto = new UserCreateDTO("boris", "123@gmail.com", "123");
+        UserCreateDTO dto = new UserCreateDTO("boris", "7 700 746 7794", "123@gmail.com","123");
         when(userRepository.findByEmail(dto.email())).thenReturn(Optional.empty());
         assertThrows(BadCredentialsException.class, () -> userService.login(dto));
         verify(jwtService, never()).generateToken(anyString());
@@ -67,7 +67,7 @@ public class UserServiceTest {
         user.setEmail("raul123@gmail.com");
         user.setPassword("1234");
 
-        UserCreateDTO dto = new UserCreateDTO(user.getUsername(), user.getEmail(), user.getPassword());
+        UserCreateDTO dto = new UserCreateDTO(user.getUsername(), user.getPhoneNumber(),user.getEmail(), user.getPassword());
         when(userRepository.existsByEmail(user.getEmail())).thenReturn(true);
 
         assertThrows(IllegalArgumentException.class, () -> userService.createUser(dto));
@@ -82,7 +82,7 @@ public class UserServiceTest {
         user.setEmail("alesha1234@gmail.com");
         user.setPassword("encoded_pass");
 
-        UserCreateDTO dto = new UserCreateDTO("Alesha","alesha1234@gmail.com","1234");
+        UserCreateDTO dto = new UserCreateDTO("Alesha","7 700 746 7794","alesha1234@gmail.com","1234");
         when(userRepository.findByEmail("alesha1234@gmail.com")).thenReturn(Optional.of(user));
         when(encoder.matches("1234","encoded_pass")).thenReturn(true);
         when(jwtService.generateToken("alesha1234@gmail.com")).thenReturn("fake_token");

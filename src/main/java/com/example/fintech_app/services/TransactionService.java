@@ -4,19 +4,20 @@ import com.example.fintech_app.DTO.TransactionResponseDTO;
 import com.example.fintech_app.DTO.Transfer;
 import com.example.fintech_app.Exceptions.InsufficientFundsException;
 import com.example.fintech_app.Exceptions.UserNotFoundException;
+import com.example.fintech_app.Repositories.IdempotencyRepository;
 import com.example.fintech_app.Repositories.TransactionRepository;
 import com.example.fintech_app.Repositories.TransactionsHRepository;
 import com.example.fintech_app.Repositories.UserRepository;
-import com.example.fintech_app.models.Transaction;
-import com.example.fintech_app.models.TransactionsHistory;
-import com.example.fintech_app.models.Type;
-import com.example.fintech_app.models.User;
+import com.example.fintech_app.models.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +25,8 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionsHRepository transactionsHRepository;
-
+    private final IdempotencyRepository idempotencyRepository;
+    private final ObjectMapper mapper;
     @Transactional
     public TransactionResponseDTO deposit(String userEmail,BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -68,7 +70,34 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionResponseDTO transfer(String senderEmail, Transfer dto) {
+    public TransactionResponseDTO transfer(String senderEmail, Transfer dto,String idempotencyKey) {
+        if(idempotencyKey!=null && !idempotencyKey.isEmpty()){
+            Optional<IdempotencyRecord> existingRecord = idempotencyRepository.findByIdempotencyKey(idempotencyKey);
+            if (existingRecord.isPresent()){
+                IdempotencyRecord record = existingRecord.get();
+
+
+            if(record.getStatus() == IdempotencyStatus.SUCCESS){
+                try {
+                    return mapper.readValue(record.getResponseBody(),TransactionResponseDTO.class);
+                } catch (Exception e) {
+                    throw new RuntimeException("Ошибка при чтении сохраненного объекта",e);
+                }
+            }
+            else if (record.getStatus() == IdempotencyStatus.IN_PROGRESS){
+                throw new IllegalStateException("Запрос с таким ключом уже обрабатывается. Подождите ");
+            }
+        }
+        else{
+            IdempotencyRecord newRecord = new IdempotencyRecord();
+            newRecord.setIdempotencyKey(idempotencyKey);
+            newRecord.setStatus(IdempotencyStatus.IN_PROGRESS);
+            idempotencyRepository.save(newRecord);
+        }
+        }
+
+
+
         if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Сумма перевода должна быть больше нуля");
         }
@@ -123,6 +152,28 @@ public class TransactionService {
 
         Transaction saved = transactionRepository.save(transaction);
 
+        if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
+            IdempotencyRecord record = idempotencyRepository.findByIdempotencyKey(idempotencyKey).orElseThrow();
+
+
+            TransactionResponseDTO responseDTO = new TransactionResponseDTO(
+                    saved.getSender().getId(),
+                    saved.getReceiver().getId(),
+                    saved.getAmount(),
+                    saved.getType(),
+                    saved.getTimestamp());
+
+            try {
+                String jsonResponse = mapper.writeValueAsString(responseDTO);
+                record.setResponseBody(jsonResponse);
+                record.setStatus(IdempotencyStatus.SUCCESS);
+                idempotencyRepository.save(record);
+                return responseDTO;
+
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Ошибка при сериализации ответа ",e);
+            }
+        }
         return new TransactionResponseDTO(
                 saved.getSender().getId(),
                 saved.getReceiver().getId(),
@@ -130,5 +181,6 @@ public class TransactionService {
                 saved.getType(),
                 saved.getTimestamp()
         );
+
     }
 }

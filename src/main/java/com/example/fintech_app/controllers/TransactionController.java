@@ -21,8 +21,8 @@ public class TransactionController {
         return service.deposit(currentUserEmail,dto.amount());
     }
     @PostMapping("/transfer")
-    public TransactionResponseDTO transfer(@Valid @RequestBody Transfer dto, Principal principal){
+    public TransactionResponseDTO transfer(@Valid @RequestBody Transfer dto, Principal principal, @RequestHeader(value = "Idempotency-Key",required = false) String idempotencyKey){
         String senderEmail = principal.getName();
-        return service.transfer(senderEmail,dto);
+        return service.transfer(senderEmail,dto,idempotencyKey);
     }
 }
